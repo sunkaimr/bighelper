@@ -16,13 +16,15 @@
 package main
 
 import (
-	"bighelper/bigiot"
-	"bighelper/config"
+	"bighelper/driver"
 	"context"
 	"log"
 	"os"
 	"os/signal"
 	"time"
+
+	"bighelper/config"
+	"bighelper/service"
 )
 
 func main() {
@@ -36,7 +38,7 @@ func main() {
 
 	devID := cfg.Section("bigiot").Key("device_id").String()
 	if devID == "" {
-		log.Printf("read config from bigiot.ini, but bigiot.device_id is null")
+		log.Printf("read config from %s, but bigiot.device_id is null", config.DefaultCfgFileName)
 		time.Sleep(time.Second * 5)
 		os.Exit(1)
 	} else {
@@ -45,25 +47,42 @@ func main() {
 
 	apiKey := cfg.Section("bigiot").Key("api_key").String()
 	if apiKey == "" {
-		log.Printf("read config from bigiot.ini, but bigiot.api_key is null")
+		log.Printf("read config from %s, but bigiot.api_key is null", config.DefaultCfgFileName)
 		time.Sleep(time.Second * 5)
 		os.Exit(1)
 	} else {
 		log.Printf("api_key:%s", apiKey)
 	}
 
+	if err := driver.RegistBuiltinCommands(); err != nil {
+		log.Printf("Regist builtin commands failed: %v", err)
+		os.Exit(1)
+	}
+
+	aliasCmds := cfg.Section("alias").Keys()
+	for _, c := range aliasCmds {
+		if err := driver.RegistAliasCommands(c.Name(), c.Value()); err != nil {
+			log.Printf("Regist alias commands failed: %v", err)
+		}
+	}
+
+	customCmds := cfg.Section("command").Keys()
+	for _, c := range customCmds {
+		if err := driver.RegistCustomCommands(c.Name(), c.Value()); err != nil {
+			log.Printf("Regist custom commands failed: %v", err)
+		}
+	}
+
 	exitCh := make(chan os.Signal)
 	signal.Notify(exitCh, os.Interrupt)
 	ctx, cancel := context.WithCancel(context.TODO())
 
-	go func() {
-		<-exitCh
-		cancel()
-		log.Printf("main recv exit signal")
-		time.Sleep(time.Second * 5)
-		log.Printf("waited 10s to force quit")
-		os.Exit(0)
-	}()
+	go service.StartService(ctx, devID, apiKey)
 
-	bigiot.StartServer(ctx, devID, apiKey)
+	<-exitCh
+	cancel()
+	log.Printf("main recv exit signal")
+	time.Sleep(time.Second * 5)
+	log.Printf("waited 5s to force quit")
+	os.Exit(0)
 }

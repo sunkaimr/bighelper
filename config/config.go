@@ -2,15 +2,16 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/ini.v1"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 const (
-	defaultCfgFileName = "bighelper.ini"
+	DefaultCfgFileName = "bighelper.ini"
 )
 
 func LoadConfig(cfgPath string) (*ini.File, error) {
@@ -33,14 +34,14 @@ func fileExist(path string) bool {
 
 func findConfig(cfgPath string) (string, error) {
 	if cfgPath == "" {
-		cfgPath = filepath.Join("./", defaultCfgFileName)
+		cfgPath = filepath.Join("./", DefaultCfgFileName)
 	}
 
 	if !fileExist(cfgPath) {
 		file, _ := exec.LookPath(os.Args[0])
 		path, _ := filepath.Abs(file)
 		index := strings.LastIndex(path, string(os.PathSeparator))
-		cfgPathAbs := filepath.Join(path[:index], defaultCfgFileName)
+		cfgPathAbs := filepath.Join(path[:index], DefaultCfgFileName)
 
 		if !fileExist(cfgPathAbs) {
 			return "", fmt.Errorf("config file not found in %v or %v", cfgPathAbs, cfgPath)

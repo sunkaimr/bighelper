@@ -1,16 +1,17 @@
 package bigiot
 
 import (
-	"bighelper/driver"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
-	"runtime"
+	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"bighelper/driver"
 )
 
 const (
@@ -44,7 +45,6 @@ type bigiotConn struct {
 
 func StartServer(ctx context.Context, devID, apiKey string) {
 
-	driver.RegistAction()
 	for {
 		conn := newBigiot(bigiotHostName, bigiotPort, devID, apiKey)
 		log.Print("newBigiot success")
@@ -75,11 +75,11 @@ func StartServer(ctx context.Context, devID, apiKey string) {
 			log.Print("bigiot server got retry signal")
 			conn.wg.Wait()
 		case <-ctx.Done():
-			log.Print("bigiot server got exit signal, wait all coroutines exit")
+			log.Print("bigiot server got exit signal, wait all goroutine exit")
 			conn.wg.Wait()
-			log.Print("all coroutines have exited")
+			log.Print("all goroutine have exited")
 			logout(conn)
-			return
+			os.Exit(0)
 		}
 	}
 }
@@ -301,7 +301,9 @@ func execCommand(ctx context.Context, conn *bigiotConn) {
 		}
 
 		if command != "" {
-			doAction(command)
+			if err := doAction(command); err != nil {
+				log.Printf("exec cmd done: %v", err)
+			}
 		}
 	}
 }
@@ -359,41 +361,12 @@ func recvCommand(conn *bigiotConn) (string, error) {
 	return result.C, err
 }
 
-func doAction(action string) {
-
-	drv := driver.GetAction(runtime.GOOS)
-	if drv == nil {
-		log.Printf("doAction failed, get cannot get driver")
-		return
+func doAction(action string) error {
+	if cmd, ok := driver.Cmds[action]; ok {
+		if cmd.Handle == nil {
+			return fmt.Errorf("doAction failed, cmd:%s Handle is nil", action)
+		}
+		return cmd.Handle(cmd.Cmd)
 	}
-
-	switch action {
-	// 关机
-	case "shutdown":
-		log.Print("recv command:", action)
-		err := drv.ShutDown()
-		if err != nil {
-			log.Printf("%v", err)
-		}
-
-		// 重启
-	case "reboot":
-		log.Print("recv command:", action)
-		err := drv.Reboot()
-		if err != nil {
-			log.Printf("%v", err)
-		}
-
-		// 取消 关机、重启
-	case "cancel":
-		log.Print("recv command:", action)
-		err := drv.Cancel()
-		if err != nil {
-			log.Printf("%v", err)
-		}
-
-		// 其他未识别的命令
-	default:
-		log.Print("unknown command:", action)
-	}
+	return fmt.Errorf("unknown command: %v", action)
 }

@@ -1,42 +1,49 @@
 package win
 
 import (
-	"github.com/CodyGuo/win"
-	//"github.com/kardianos/service"
+	"bighelper/driver"
+	"fmt"
 	"log"
+
+	"github.com/CodyGuo/win"
 )
 
 /*
   TODO 详细的参数参考: https://docs.microsoft.com/zh-cn/windows/win32/api/winuser/nf-winuser-exitwindowsex?redirectedfrom=MSDN
 */
 
-var WinAction *Action
+func init(){
+	driver.RegistAction("windows", &Action{})
+}
 
 type Action struct{}
 
 /* 	关机
 限制: 所有文件都已写入磁盘，所有软件都已关闭。如果有其他软件阻止，则无法关闭
 */
-func (la *Action) ShutDown() error {
-	//getPrivileges()
-	//if win.ExitWindowsEx(win.EWX_SHUTDOWN|win.EWX_FORCE, 0) {
-	//	return fmt.Errorf("shutdown exec failed")
-	//}
-	log.Print("ShutDown")
+func (la *Action) ShutDown(cmd string) error {
+	getPrivileges()
+	if win.ExitWindowsEx(win.EWX_SHUTDOWN|win.EWX_FORCE, 0) {
+		return fmt.Errorf("shutdown exec failed")
+	}
 	return nil
 }
 
-func (la *Action) Reboot() error {
-	//getPrivileges()
-	//if win.ExitWindowsEx(win.EWX_REBOOT|win.EWX_FORCE, 0){
-	//	return fmt.Errorf("reboot exec failed")
-	//}
-	log.Print("Reboot")
+func (la *Action) Reboot(cmd string) error {
+	getPrivileges()
+	if win.ExitWindowsEx(win.EWX_REBOOT|win.EWX_FORCE, 0) {
+		return fmt.Errorf("reboot exec failed")
+	}
 	return nil
 }
 
-func (la *Action) Cancel() error {
+func (la *Action) Cancel(cmd string) error {
 	log.Print("not support cancel")
+	return nil
+}
+
+func (la *Action) Custom(cmd string) error {
+	log.Printf("not support Custom command: %s", cmd)
 	return nil
 }
 
