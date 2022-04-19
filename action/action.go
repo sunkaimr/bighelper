@@ -1,6 +1,7 @@
-package driver
+package action
 
 import (
+	driver2 "bighelper/action/driver"
 	"fmt"
 	"runtime"
 )
@@ -25,6 +26,7 @@ type Command struct {
 type Driver interface {
 	ShutDown(string) error
 	Reboot(string) error
+	Sleep(string) error
 	Cancel(string) error
 	Custom(string) error
 }
@@ -32,8 +34,8 @@ type Driver interface {
 var DriverMap = make(map[string]Driver, 2)
 var Cmds = make(map[string]*Command, 10)
 
-func RegistAction(os string, driver Driver) {
-	DriverMap[os] = driver
+func registAction() {
+	DriverMap[runtime.GOOS] = &driver2.Driver{}
 }
 
 func getAction(driver string) Driver {
@@ -44,24 +46,31 @@ func getAction(driver string) Driver {
 }
 
 func RegistBuiltinCommands() error {
+	registAction()
+
 	drv := getAction(runtime.GOOS)
 	if drv == nil {
-		return fmt.Errorf("get driver failed, drv is nil",)
+		return fmt.Errorf("get action failed, drv is nil")
 	}
 
 	Cmds["shutdown"] = &Command{
 		Type:   CmdTypeBuiltin,
-		Cmd:    "shutdown -h 1",
+		Cmd:    "",
 		Handle: drv.ShutDown,
 	}
 	Cmds["reboot"] = &Command{
 		Type:   CmdTypeBuiltin,
-		Cmd:    "shutdown -r 1",
+		Cmd:    "",
 		Handle: drv.Reboot,
+	}
+	Cmds["sleep"] = &Command{
+		Type:   CmdTypeBuiltin,
+		Cmd:    "",
+		Handle: drv.Sleep,
 	}
 	Cmds["cancel"] = &Command{
 		Type:   CmdTypeBuiltin,
-		Cmd:    "shutdown -c",
+		Cmd:    "",
 		Handle: drv.Cancel,
 	}
 	return nil
@@ -90,7 +99,7 @@ func RegistCustomCommands(key, value string) error {
 
 	drv := getAction(runtime.GOOS)
 	if drv == nil {
-		return fmt.Errorf("get driver failed, drv is nil",)
+		return fmt.Errorf("get action failed, drv is nil")
 	}
 
 	Cmds[key] = &Command{

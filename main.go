@@ -16,7 +16,7 @@
 package main
 
 import (
-	"bighelper/driver"
+	"bighelper/action"
 	"context"
 	"log"
 	"os"
@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	log.Printf("version 1.0")
+	log.Printf("version 2.0")
 	cfg, err := config.LoadConfig("")
 	if err != nil {
 		log.Printf("fail loadconfig, err:%v", err)
@@ -54,21 +54,22 @@ func main() {
 		log.Printf("api_key:%s", apiKey)
 	}
 
-	if err := driver.RegistBuiltinCommands(); err != nil {
+	if err := action.RegistBuiltinCommands(); err != nil {
 		log.Printf("Regist builtin commands failed: %v", err)
+		time.Sleep(time.Second * 5)
 		os.Exit(1)
 	}
 
 	aliasCmds := cfg.Section("alias").Keys()
 	for _, c := range aliasCmds {
-		if err := driver.RegistAliasCommands(c.Name(), c.Value()); err != nil {
+		if err := action.RegistAliasCommands(c.Name(), c.Value()); err != nil {
 			log.Printf("Regist alias commands failed: %v", err)
 		}
 	}
 
 	customCmds := cfg.Section("command").Keys()
 	for _, c := range customCmds {
-		if err := driver.RegistCustomCommands(c.Name(), c.Value()); err != nil {
+		if err := action.RegistCustomCommands(c.Name(), c.Value()); err != nil {
 			log.Printf("Regist custom commands failed: %v", err)
 		}
 	}
@@ -82,7 +83,7 @@ func main() {
 	<-exitCh
 	cancel()
 	log.Printf("main recv exit signal")
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 1)
 	log.Printf("waited 5s to force quit")
 	os.Exit(0)
 }

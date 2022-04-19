@@ -2,23 +2,31 @@
 
 ## 功能
 
-通过连接[贝壳物联平台](https://www.bigiot.net)实现远程关机等功能，还可以将[贝壳物联](https://www.bigiot.net)账号绑定到天猫精良、小爱同学、小度等实现语音远程注销、关机、重启电脑等操作。
+通过连接[贝壳物联平台](https://www.bigiot.net)实现远程关机等功能，还可以将[贝壳物联](https://www.bigiot.net)账号绑定到天猫精良、小爱同学、小度等实现语音远程对电脑进行注销、关机、重启、休眠等操作还支持自定义指令。
 
 *支持windowns系统和linux系统（树莓派等）*
 
 ## 代码结构
 ```bash
 bighelper
+├── action
+│   ├── driver
+│   │   ├── driver_linux.go
+│   │   └── driver_windows.go
+│   └── action.go
+├── bigiot
+│   └── bitgiot.go
+├── bin
+├── config
+│   └── config.go
+├── service
+│   └── service.go
 ├── LICENSE
 ├── README.md
-├── linux                  # linux下使用此下面代码
-│   ├── bighelper.ini       # 配置文件
-│   ├── go.mod
-│   └── main.go            # 主程序
-└── win                    # windows下使用此下面代码
-    ├── bighelper.ini      # 配置文件
-    ├── go.mod
-    └── main.go            # 主程序             
+├── bighelper.ini  # 配置文件
+├── go.mod
+├── go.sum
+└── main.go        # 程序入口   
 ```
 
 ## 编译
@@ -28,8 +36,7 @@ bighelper
 ### 编译用于在windows下运行二进制
 
 ```bash
-# 切换至win目录下
-cd bighelper/win
+cd bighelper
 
 # 设置编译环境，并编译
 GOOS=windows GOARCH=amd64 go build
@@ -40,8 +47,7 @@ GOOS=windows GOARCH=amd64 go build
 ### 编译用于在linux下运行的程序
 
 ```bash
-# 切换至linux目录下
-cd bighelper/linux
+cd bighelper
 
 # 设置编译环境，并编译。GOARCH设置为amd64
 GOOS=linux GOARCH=amd64 go build
@@ -52,8 +58,7 @@ GOOS=linux GOARCH=amd64 go build
 ### 编译用于在树莓派下运行的程序
 
 ```bash
-# 切换至linux目录下
-cd bighelper/linux
+cd bighelper
 
 # 设置编译环境，并编译。GOARCH设置为arm
 GOOS=linux GOARCH=arm go build
@@ -73,13 +78,15 @@ device_id = 12345
 
 # APIKey，修改为自己的实际值
 api_key   = 1s2f3h4k5
+
+# 其他配置可根据自己需要更改
 ```
 
 ## 安装
 
 ### windows系统上安装
 
-#### 以服务方式运行
+#### 以服务方式运行（建议）
 
 在windows下支持将应用安装为服务（服务和普通程序的区别请自行了解），随系统自动启动。
 
@@ -95,21 +102,12 @@ C:\Program Files\bighepler
 #    bighelper.ini配置文件中的device_id和APIKey需要修改为自己的值
 ```
 
-- 利用windows的sc工具将应用发布成服务
+- 以管理员方式执行`install.bat`批处理指令
 
 ```bash
-# 1. 在windows左下角搜索框输入“cmd”，找到“命令提示符”程序，以管理员身份运行
-#    如果不知道怎么操作请自行百度解决，但是“命令提示符”程序务必是以管理员身份启动，否则接下来安装服务会失败
+# 安装执行install.bat批处理
 
-# 2. 安装服务。其中“binpath”的值填写自己bighelper.exe安装的绝对路径。注意“=”后边有一个空格
-sc create bighelper binpath= "C:\Program Files\bighepler\bighelper.exe" start= auto displayname= "bighelper"
-
-# 3. 启动服务
-net start bighelper
-
-# 其他命令
-net stop bighelper      # 停止服务
-sc  delete bighelper    # 卸载服务
+# 卸载执行uninstall.bat批处理
 ```
 
 - 确认服务安装成功及运行状态
@@ -123,7 +121,7 @@ sc  delete bighelper    # 卸载服务
 # 桌面找到“此电脑” > 鼠标右键单击“此电脑” > 选择"管理" > 点击“服务和应用程序” > 点击“服务”，在服务列表中根据服务名称“bighepler”可以查看服务的状态，启动或者关闭服务。
 ```
 
-#### 以普通应用方式运行
+#### 以普通应用方式运行（不建议）
 
 - 将bighelper.exe可执行文件和bighelper.ini配置文件放置到合适的位置，比如新建目录"C:\Program Files\bighepler"放置进去
 - bighelper.ini配置文件中的device_id和APIKey需要修改为自己的值
@@ -213,59 +211,32 @@ journalctl -fu bighelper
 ## 控制指令
 通过[贝壳物联](https://www.bigiot.net)网页端或者贝壳物联公众号向设备发送指令控制设备。支持以下指令
 
-### windows支持的命令
-
-- 命令：logoff
-```bash
-功能：注销登录
-限制: 只能在用户登录后启动的应用生效;如果有其他软件阻止，则无法注销
-      比如“以普通应用方式运行”才能生效，“以服务方式运行”时此命令无效，因为服务不属于任何用户所以不存在注销一说
-```
-
-- 命令：forcelogoff
-```bash
-功能：强制注销登录
-功能：注销登录
-限制: 只能在用户登录后启动的应用生效;可能导致未保存的文件丢失。
-      比如“以普通应用方式运行”才能生效，“以服务方式运行”时此命令无效，因为服务不属于任何用户所以不存在注销一说
-```
-
-- 命令：shutdown
-```bash
-功能：关机
-限制: 所有文件都已写入磁盘，所有软件都已关闭。如果有其他软件阻止，则无法关闭
-```
-- 命令：forceshutdown
-```bash
-功能：强制关机
-限制: 可能导致未保存的文件丢失
-```
-- 命令：reboot
-```bash
-功能：重启
-限制: 所有文件都已写入磁盘，所有软件都以关闭。 如果有其他软件阻止，则无法重启
-```
-
-- 命令：forcereboot
-```bash
-功能：强制重启
-限制: 可能导致未保存的文件丢失
-```
-
-### linux下支持的命令
+### 内置的指令
 
 - 命令：shutdown
 
 ```bash
-功能：关机
-说明：相当于执行命令“shutdown -H -t 15”，收到命令后15秒后开始关机
+# 功   能：一分钟后关机，可在一分钟内取消执行
+# 限   制: 可能导致未保存的文件丢失
+# linux ：shutdown -h 1
+# windows：shutdown -s -t 60
 ```
 
 - 命令：reboot
 
 ```bash
-功能：重启
-说明：相当于执行命令“shutdown -r -t 15”，收到命令后15秒后开始重启
+# 功   能：一分钟后重启，可在一分钟内取消执行
+# 限  制: 可能导致未保存的文件丢失
+# linux：shutdown -r 1
+# windows：shutdown -r -t 60
+```
+
+- 命令：sleep
+
+```bash
+# 功  能：休眠
+# 限  制: 仅windowns生效
+# windows：shutdown -h
 ```
 
 - 命令：cancel
@@ -273,5 +244,34 @@ journalctl -fu bighelper
 ```bash
 功能：关机
 说明：相当于执行命令“shutdown -c”，当发出“shutdown”和“reboot”后15秒内发送该命令可以取消关机或重启
+```
+
+### 指令别名
+
+作用是给内置的命令起一个别名，以达到和内置指令相同效果的目的。
+
+举2个例子：
+
+1，贝壳物联是没有`shutdown`指令，但是有`stop`指令，可以将`stop`作为内置指令`shutdown`的别名。
+
+2，贝壳物联有一个指令是`pause`,可以将`pause`作为内置指令`sleep`的别名。具体实现方式如下：
+
+```bash
+# 修改bighelper.ini的配置文件，找到`[alias]`配置块
+
+[alias]
+# 执行stop和执行shutdown指令有相同的效果
+shutdown = stop
+sleep = pause
+```
+
+### 自定义指令
+
+```bash
+[command]
+# 自定义命令
+# 功  能：执行自定义指令
+custom = "touch /test.txt"        # 执行指令
+bash = "bash /home/example.sh"    # 执行脚本
 ```
 

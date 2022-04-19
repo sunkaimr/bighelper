@@ -1,19 +1,14 @@
-package linux
+package driver
 
 import (
-	"bighelper/driver"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
-var LinuxAction *Action
+type Driver struct{}
 
-func init(){
-	driver.RegistAction("linux", &Action{})
-}
-
-func (la *Action) ShutDown(cmd string) error {
+func (la *Driver) ShutDown(cmd string) error {
 	// 1分钟后关机
 	out, err := exec.Command("shutdown", "-h", "1").Output()
 	if err != nil {
@@ -22,16 +17,21 @@ func (la *Action) ShutDown(cmd string) error {
 	return nil
 }
 
-func (la *Action) Reboot(cmd string) error {
+func (la *Driver) Reboot(cmd string) error {
 	// 1分钟后重启
-	out, err := exec.Command("shutdown", "-r").Output()
+	out, err := exec.Command("shutdown", "-r", "1").Output()
 	if err != nil {
 		return fmt.Errorf("exec command failed, err: %v, outpout:%v", err, out)
 	}
 	return nil
 }
 
-func (la *Action) Cancel(cmd string) error {
+func (la *Driver) Sleep(cmd string) error {
+	// linux不支持休眠功能
+	return fmt.Errorf("unsuport sleep command")
+}
+
+func (la *Driver) Cancel(cmd string) error {
 	// 取消关机
 	out, err := exec.Command("shutdown", "-c").Output()
 	if err != nil {
@@ -40,7 +40,7 @@ func (la *Action) Cancel(cmd string) error {
 	return nil
 }
 
-func (la *Action) Custom(cmd string) error {
+func (la *Driver) Custom(cmd string) error {
 	cmds := strings.Split(cmd, " ")
 
 	if len(cmds) == 0 {

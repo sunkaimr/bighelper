@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"bighelper/driver"
+	"bighelper/action"
 )
 
 const (
@@ -91,7 +91,7 @@ func newBigiot(hostname string, port int, deviceId, apiKey string) *bigiotConn {
 		deviceID:  deviceId,
 		apiKey:    apiKey,
 		conn:      nil,
-		timeout:   time.Second * 1,
+		timeout:   time.Second * 3,
 		heartBeat: time.Second * 20,
 		wg:        sync.WaitGroup{},
 		retry:     false,
@@ -287,7 +287,7 @@ func execCommand(ctx context.Context, conn *bigiotConn) {
 			log.Print("execCommand got exit signal")
 			return
 		case <-t.C:
-			//log.Print("execCommand recv")
+			// log.Print("recv command...")
 		case <-conn.retryCh:
 			log.Print("execCommand got retry signal")
 			return
@@ -301,8 +301,11 @@ func execCommand(ctx context.Context, conn *bigiotConn) {
 		}
 
 		if command != "" {
+			log.Printf("receive cmd: %s", command)
 			if err := doAction(command); err != nil {
-				log.Printf("exec cmd done: %v", err)
+				log.Printf("failed to exec cmd: %v", err)
+			} else {
+				log.Printf("success exec cmd: %s", command)
 			}
 		}
 	}
@@ -361,12 +364,12 @@ func recvCommand(conn *bigiotConn) (string, error) {
 	return result.C, err
 }
 
-func doAction(action string) error {
-	if cmd, ok := driver.Cmds[action]; ok {
+func doAction(cmd string) error {
+	if cmd, ok := action.Cmds[cmd]; ok {
 		if cmd.Handle == nil {
-			return fmt.Errorf("doAction failed, cmd:%s Handle is nil", action)
+			return fmt.Errorf("doAction failed, cmd:%s Handle is nil", cmd)
 		}
 		return cmd.Handle(cmd.Cmd)
 	}
-	return fmt.Errorf("unknown command: %v", action)
+	return fmt.Errorf("unknown command: %v", cmd)
 }
